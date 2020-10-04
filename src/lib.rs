@@ -35,12 +35,12 @@ pub fn combine_playlists(playlists: &[impl AsRef<Path>]) -> Result<()> {
     let playlists = playlists
         .iter()
         .map(|p| BufReader::new(File::open(p)?).lines().collect())
-        .collect::<Result<Vec<Vec<String>>, io::Error>>()?;
+        .collect::<Result<Vec<Vec<_>>, io::Error>>()?;
 
     let combined_playlist = combine_lists(&playlists)
         .iter()
         .map(|l| l.as_str())
-        .collect::<Vec<&str>>();
+        .collect::<Vec<_>>();
     let file_content = combined_playlist.join("\n");
     fs::write("combined.m3u8", file_content)?;
 
@@ -85,7 +85,7 @@ fn combine_lists<T>(lists: &[Vec<T>]) -> Vec<&T> {
         .iter()
         .map(|p| (VecDeque::from_iter(p), p.len()))
         .collect::<Vec<(VecDeque<_>, usize)>>();
-    let mut combined_lists: Vec<&T> = Vec::with_capacity(total_size);
+    let mut combined_lists: Vec<_> = Vec::with_capacity(total_size);
 
     for i in 1..=total_size {
         let progress = i as f32 / total_size as f32;

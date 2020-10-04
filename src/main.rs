@@ -32,14 +32,14 @@ fn main() -> Result<()> {
     if let Some(matches) = matches.subcommand_matches("create") {
         let directories = matches
             .values_of("DIRECTORIES")
-            .map(|v| v.collect::<Vec<&str>>())
+            .map(|v| v.collect::<Vec<_>>())
             .unwrap();
 
         playlistr::create_playlists(&directories)?;
     } else if let Some(matches) = matches.subcommand_matches("combine") {
         let playlists = matches
             .values_of("PLAYLISTS")
-            .map(|v| v.collect::<Vec<&str>>())
+            .map(|v| v.collect::<Vec<_>>())
             .unwrap();
 
         playlistr::combine_playlists(&playlists)?;
