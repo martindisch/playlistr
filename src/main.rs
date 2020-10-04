@@ -11,23 +11,21 @@ fn main() -> Result<()> {
             SubCommand::with_name("create")
                 .about("Creates a playlist from files in a directory")
                 .arg(
-                    Arg::with_name("DIRECTORY")
-                        .help("The directory where the files are located")
-                        .required(true),
-                )
-                .arg(
-                    Arg::with_name("PLAYLIST")
-                        .help("The path to the output playlist file")
-                        .required(true),
+                    Arg::with_name("DIRECTORIES")
+                        .help("The directories where the files are located")
+                        .required(true)
+                        .multiple(true),
                 ),
         )
         .get_matches();
 
     if let Some(matches) = matches.subcommand_matches("create") {
-        let directory = matches.value_of("DIRECTORY").unwrap();
-        let playlist = matches.value_of("PLAYLIST").unwrap();
+        let directories = matches
+            .values_of("DIRECTORIES")
+            .map(|v| v.collect::<Vec<&str>>())
+            .unwrap();
 
-        playlistr::create_playlist(directory, playlist)?;
+        playlistr::create_playlists(&directories)?;
     }
 
     Ok(())
