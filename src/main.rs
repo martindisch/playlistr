@@ -17,6 +17,16 @@ fn main() -> Result<()> {
                         .multiple(true),
                 ),
         )
+        .subcommand(
+            SubCommand::with_name("combine")
+                .about("Combines several playlists into one")
+                .arg(
+                    Arg::with_name("PLAYLISTS")
+                        .help("The playlists to combine")
+                        .required(true)
+                        .multiple(true),
+                ),
+        )
         .get_matches();
 
     if let Some(matches) = matches.subcommand_matches("create") {
@@ -26,6 +36,13 @@ fn main() -> Result<()> {
             .unwrap();
 
         playlistr::create_playlists(&directories)?;
+    } else if let Some(matches) = matches.subcommand_matches("combine") {
+        let playlists = matches
+            .values_of("PLAYLISTS")
+            .map(|v| v.collect::<Vec<&str>>())
+            .unwrap();
+
+        playlistr::combine_playlists(&playlists)?;
     }
 
     Ok(())

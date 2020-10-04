@@ -1,5 +1,11 @@
 use eyre::{eyre, Report, Result};
-use std::{fs, io, path::Path};
+use std::{
+    collections::VecDeque,
+    fs::{self, File},
+    io::{self, BufRead, BufReader},
+    iter::FromIterator,
+    path::Path,
+};
 
 /// Writes playlists for the given directories to the working directory.
 ///
@@ -17,6 +23,26 @@ pub fn create_playlists(directories: &[impl AsRef<Path>]) -> Result<()> {
 
         create_playlist(directory, playlist)?;
     }
+
+    Ok(())
+}
+
+/// Writes the combination of the given playlists to the working directory.
+///
+/// # Arguments
+/// * `playlists` - The playlists to combine.
+pub fn combine_playlists(playlists: &[impl AsRef<Path>]) -> Result<()> {
+    let playlists = playlists
+        .iter()
+        .map(|p| BufReader::new(File::open(p)?).lines().collect())
+        .collect::<Result<Vec<Vec<String>>, io::Error>>()?;
+
+    let combined_playlist = combine_lists(&playlists)
+        .iter()
+        .map(|l| l.as_str())
+        .collect::<Vec<&str>>();
+    let file_content = combined_playlist.join("\n");
+    fs::write("combined.m3u8", file_content)?;
 
     Ok(())
 }
@@ -46,4 +72,97 @@ fn create_playlist(
     fs::write(playlist, file_content)?;
 
     Ok(())
+}
+
+/// Evenly distributes elements from lists of possibly different sizes.
+///
+/// # Arguments
+/// * `lists` - The lists to combine.
+fn combine_lists<T>(lists: &[Vec<T>]) -> Vec<&T> {
+    let total_size = lists.iter().fold(0, |acc, x| acc + x.len());
+    // Since we want to pop elements from the front, we need VecDeques
+    let mut lists = lists
+        .iter()
+        .map(|p| (VecDeque::from_iter(p), p.len()))
+        .collect::<Vec<(VecDeque<_>, usize)>>();
+    let mut combined_lists: Vec<&T> = Vec::with_capacity(total_size);
+
+    for i in 1..=total_size {
+        let progress = i as f32 / total_size as f32;
+
+        for (list, original_size) in lists.iter_mut() {
+            let target_distributed = *original_size as f32 * progress;
+            let already_distributed = (*original_size - list.len()) as f32;
+
+            if already_distributed < target_distributed {
+                if let Some(element) = list.pop_front() {
+                    combined_lists.push(element);
+                }
+            }
+        }
+    }
+
+    combined_lists
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn distribute_equally() {
+        let playlists = vec![
+            vec!["11", "12", "13", "14"],
+            vec!["21", "22", "23", "24"],
+            vec!["31", "32", "33", "34"],
+        ];
+        let owned = to_owned(&playlists);
+        let combined = combine_lists(&owned);
+        assert_eq!(
+            [
+                "11", "21", "31", "12", "22", "32", "13", "23", "33", "14",
+                "24", "34",
+            ],
+            &combined[..]
+        );
+    }
+
+    #[test]
+    fn distribute_different_length_2() {
+        let playlists = vec![vec!["11", "12", "13", "14"], vec!["21", "22"]];
+        let owned = to_owned(&playlists);
+        let combined = combine_lists(&owned);
+        assert_eq!(["11", "21", "12", "13", "22", "14",], &combined[..]);
+    }
+
+    #[test]
+    fn distribute_different_length_3() {
+        let playlists = vec![
+            vec!["11", "12"],
+            vec!["21", "22", "23", "24"],
+            vec!["31", "32"],
+        ];
+        let owned = to_owned(&playlists);
+        let combined = combine_lists(&owned);
+        assert_eq!(
+            ["11", "21", "31", "22", "12", "23", "32", "24"],
+            &combined[..]
+        );
+    }
+
+    #[test]
+    fn distribute_uneven() {
+        let playlists =
+            vec![vec!["11"], vec!["21", "22", "23"], vec!["31", "32"]];
+        let owned = to_owned(&playlists);
+        let combined = combine_lists(&owned);
+        assert_eq!(["11", "21", "31", "22", "32", "23",], &combined[..]);
+    }
+
+    fn to_owned(outer: &[Vec<&str>]) -> Vec<Vec<String>> {
+        outer
+            .iter()
+            .map(|inner| inner.iter().map(|s| s.to_string()).collect())
+            .collect()
+    }
 }
