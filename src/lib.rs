@@ -1,4 +1,5 @@
 use eyre::{eyre, Report, Result};
+use percent_encoding::{AsciiSet, CONTROLS};
 use std::{
     collections::VecDeque,
     fs::{self, File},
@@ -6,6 +7,8 @@ use std::{
     iter::FromIterator,
     path::Path,
 };
+
+const FRAGMENT: &AsciiSet = &CONTROLS.add(b'[').add(b']');
 
 /// Writes playlists for the given directories to the working directory.
 ///
@@ -60,9 +63,10 @@ fn create_playlist(
         .map(|res| res.map(|e| e.path()))
         .map(|res| {
             res.map(|p| {
-                p.to_str()
-                    .ok_or_else(|| eyre!("Invalid unicode"))
-                    .map(|f| f.to_owned())
+                p.to_str().ok_or_else(|| eyre!("Invalid unicode")).map(|l| {
+                    percent_encoding::utf8_percent_encode(l, FRAGMENT)
+                        .to_string()
+                })
             })
         })
         .collect::<Result<Result<Vec<_>, Report>, io::Error>>()??;

@@ -7,3 +7,4 @@ edition = "2018"
 [dependencies]
 clap = "2.33.3"
 eyre = "0.6.1"
+percent-encoding = "2.1.0"
