@@ -1,9 +1,9 @@
-use eyre::{eyre, Report, Result};
+use eyre::{eyre, Result};
 use percent_encoding::{AsciiSet, CONTROLS};
 use std::{
     collections::VecDeque,
     fs::{self, File},
-    io::{self, BufRead, BufReader},
+    io::{BufRead, BufReader},
     iter::FromIterator,
     path::Path,
 };
@@ -38,7 +38,7 @@ pub fn combine_playlists(playlists: &[impl AsRef<Path>]) -> Result<()> {
     let playlists = playlists
         .iter()
         .map(|p| BufReader::new(File::open(p)?).lines().collect())
-        .collect::<Result<Vec<Vec<_>>, io::Error>>()?;
+        .collect::<Result<Vec<_>, _>>()?;
 
     let combined_playlist = combine_lists(&playlists)
         .iter()
@@ -69,7 +69,7 @@ fn create_playlist(
                 })
             })
         })
-        .collect::<Result<Result<Vec<_>, Report>, io::Error>>()??;
+        .collect::<Result<Result<Vec<_>, _>, _>>()??;
     sorted_files.sort();
 
     let file_content = sorted_files.join("\n");
@@ -88,8 +88,8 @@ fn combine_lists<T>(lists: &[Vec<T>]) -> Vec<&T> {
     let mut lists = lists
         .iter()
         .map(|p| (VecDeque::from_iter(p), p.len()))
-        .collect::<Vec<(VecDeque<_>, usize)>>();
-    let mut combined_lists: Vec<_> = Vec::with_capacity(total_size);
+        .collect::<Vec<_>>();
+    let mut combined_lists = Vec::with_capacity(total_size);
 
     for i in 1..=total_size {
         let progress = i as f32 / total_size as f32;
